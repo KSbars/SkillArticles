@@ -7,49 +7,43 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import ru.skillbranch.skillarticles.data.PrefManager
-import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 class PrefDelegate<T>(private val defaultValue: T, private val customKey: String? = null) {
+
     operator fun provideDelegate(
         thisRef: PrefManager,
         prop: KProperty<*>
     ): ReadWriteProperty<PrefManager, T> {
 
         val key = createKey(customKey ?: prop.name, defaultValue)
-        return object : ReadWriteProperty<PrefManager, T>{
-            private var _storedValue: T? = null
+        return object : ReadWriteProperty<PrefManager, T> {
 
+            private var storedValue: T? = null
+
+            override fun getValue(thisRef: PrefManager, property: KProperty<*>): T {
+                if (storedValue == null) {
+                    val flowValue = thisRef.dataStore.data
+                        .map { prefs -> prefs[key] ?: defaultValue }
+                    // Dispatchers.IO is not required since dataStore already performs read/write operations on IO
+                    storedValue = runBlocking(Dispatchers.IO) { flowValue.first() }
+                }
+                return storedValue!!
+            }
 
             override fun setValue(thisRef: PrefManager, property: KProperty<*>, value: T) {
-                _storedValue = value
-                //set non blocking on coroutine
+                storedValue = value
                 thisRef.scope.launch {
-                    thisRef.dataStore.edit { prefs ->
-                        prefs[key] = value
+                    thisRef.dataStore.edit { pref ->
+                        pref[key] = value
                     }
                 }
             }
-
-            override fun getValue(thisRef: PrefManager, property: KProperty<*>): T {
-                if(_storedValue == null){
-                    //async flow
-                    val flowValue = thisRef.dataStore.data
-                        .map{ prefs ->
-                            prefs[key] ?: defaultValue
-                        }
-                    //sync read (on IO Dispatcher and return result on call thread)
-                    _storedValue = runBlocking(Dispatchers.IO) { flowValue.first() }
-                }
-                return _storedValue!!
-            }
         }
-
     }
 
-
-    @Suppress("UNCHECKED_CAST")
+    @SuppressWarnings("unchecked_cast")
     fun createKey(name: String, value: T): Preferences.Key<T> =
         when (value) {
             is Int -> intPreferencesKey(name)
@@ -60,5 +54,4 @@ class PrefDelegate<T>(private val defaultValue: T, private val customKey: String
             is Boolean -> booleanPreferencesKey(name)
             else -> error("This type can not be stored into Preferences")
         }.run { this as Preferences.Key<T> }
-
 }

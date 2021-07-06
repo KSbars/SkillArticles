@@ -11,9 +11,10 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
+import ru.skillbranch.skillarticles.R
+import ru.skillbranch.skillarticles.extensions.getDimension
 import com.google.android.material.shape.MaterialShapeDrawable
-import ru.skillbranch.skillarticles.databinding.LayoutSubmenuBinding
-import ru.skillbranch.skillarticles.extensions.dpToPx
+import ru.skillbranch.skillarticles.databinding.LayoutArticleSubmenuBinding
 import ru.skillbranch.skillarticles.ui.custom.behaviors.SubmenuBehavior
 import kotlin.math.hypot
 
@@ -21,44 +22,39 @@ class ArticleSubmenu @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ConstraintLayout(context, attrs, defStyleAttr) , CoordinatorLayout.AttachedBehavior {
+) : ConstraintLayout(context, attrs, defStyleAttr), CoordinatorLayout.AttachedBehavior {
 
-    val binding: LayoutSubmenuBinding
+    var isOpen: Boolean = false
+    private var rightBottomX: Float = context.getDimension(R.dimen.submenu_width)
+    private var rightBottomY: Float = context.getDimension(R.dimen.submenu_height)
 
-    var isOpen = false
-    private var centerX: Float = context.dpToPx(200)
-    private var centerY: Float = context.dpToPx(96)
+    val binding: LayoutArticleSubmenuBinding
 
     init {
-        binding = LayoutSubmenuBinding.inflate(LayoutInflater.from(context), this)
-        //add material bg for handle elevation and color surface
+        binding = LayoutArticleSubmenuBinding.inflate(LayoutInflater.from(context), this, true)
         val materialBg = MaterialShapeDrawable.createWithElevationOverlay(context)
         materialBg.elevation = elevation
         background = materialBg
     }
 
-    override fun getBehavior(): CoordinatorLayout.Behavior<ArticleSubmenu> {
-        return SubmenuBehavior()
-    }
-
     fun open() {
         if (isOpen || !isAttachedToWindow) return
         isOpen = true
-        animatedShow()
+        animateShow()
     }
 
     fun close() {
         if (!isOpen || !isAttachedToWindow) return
         isOpen = false
-        animatedHide()
+        animateHide()
     }
 
-    private fun animatedShow() {
-        val endRadius = hypot(centerX, centerY).toInt()
+    private fun animateShow() {
+        val endRadius = hypot(rightBottomX, rightBottomY).toInt()
         val anim = ViewAnimationUtils.createCircularReveal(
             this,
-            centerX.toInt(),
-            centerY.toInt(),
+            rightBottomX.toInt(),
+            rightBottomY.toInt(),
             0f,
             endRadius.toFloat()
         )
@@ -68,12 +64,12 @@ class ArticleSubmenu @JvmOverloads constructor(
         anim.start()
     }
 
-    private fun animatedHide() {
-        val endRadius = hypot(centerX, centerY).toInt()
+    private fun animateHide() {
+        val endRadius = hypot(rightBottomX, rightBottomY).toInt()
         val anim = ViewAnimationUtils.createCircularReveal(
             this,
-            centerX.toInt(),
-            centerY.toInt(),
+            rightBottomX.toInt(),
+            rightBottomY.toInt(),
             endRadius.toFloat(),
             0f
         )
@@ -83,42 +79,44 @@ class ArticleSubmenu @JvmOverloads constructor(
         anim.start()
     }
 
-    //save state
-    override fun onSaveInstanceState(): Parcelable? {
+    override fun onSaveInstanceState(): Parcelable {
         val savedState = SavedState(super.onSaveInstanceState())
-        savedState.ssIsOpen = isOpen
+        savedState.isOpen = isOpen
         return savedState
     }
 
-    //restore state
-    override fun onRestoreInstanceState(state: Parcelable) {
+    override fun onRestoreInstanceState(state: Parcelable?) {
         super.onRestoreInstanceState(state)
         if (state is SavedState) {
-            isOpen = state.ssIsOpen
+            isOpen = state.isOpen
             visibility = if (isOpen) View.VISIBLE else View.GONE
         }
     }
 
     private class SavedState : BaseSavedState, Parcelable {
-        var ssIsOpen: Boolean = false
+
+        var isOpen: Boolean = false
 
         constructor(superState: Parcelable?) : super(superState)
 
         constructor(src: Parcel) : super(src) {
-            ssIsOpen = src.readInt() == 1
+            isOpen = src.readInt() == 1
         }
 
-        override fun writeToParcel(dst: Parcel, flags: Int) {
-            super.writeToParcel(dst, flags)
-            dst.writeInt(if (ssIsOpen) 1 else 0)
+        override fun writeToParcel(out: Parcel?, flags: Int) {
+            super.writeToParcel(out, flags)
+            out?.writeInt(if (isOpen) 1 else 0)
         }
 
-        override fun describeContents() = 0
+        override fun describeContents(): Int = 0
 
         companion object CREATOR : Parcelable.Creator<SavedState> {
-            override fun createFromParcel(parcel: Parcel) = SavedState(parcel)
+
+            override fun createFromParcel(source: Parcel): SavedState = SavedState(source)
+
             override fun newArray(size: Int): Array<SavedState?> = arrayOfNulls(size)
         }
     }
 
+    override fun getBehavior(): CoordinatorLayout.Behavior<*> = SubmenuBehavior()
 }

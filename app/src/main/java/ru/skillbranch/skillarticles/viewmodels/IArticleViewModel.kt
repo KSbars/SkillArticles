@@ -26,7 +26,6 @@ interface IArticleViewModel {
      */
     fun handleNightMode()
 
-
     /**
      * Обработка нажатия на btn_text_up (увеличение шрифта текста)
      * необходимо увеличить шрифт до значения 18
@@ -82,9 +81,10 @@ interface IArticleViewModel {
     fun handleSearch(query: String?)
 
     /**
-     * переместиться к предидущему совпадению поиска
+     * переместиться к предыдущему совпадению поиска
      */
     fun handleUpResult()
+
     /**
      * переместиться к следующему совпадению поиска
      */

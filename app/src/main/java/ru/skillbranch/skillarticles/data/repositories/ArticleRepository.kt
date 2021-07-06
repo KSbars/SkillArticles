@@ -3,41 +3,32 @@ package ru.skillbranch.skillarticles.data.repositories
 import androidx.lifecycle.LiveData
 import ru.skillbranch.skillarticles.data.*
 
-interface IArticleRepository {
-    fun loadArticleContent(articleId: String): LiveData<String?>
-    fun getArticle(articleId: String): LiveData<ArticleData?>
-    fun loadArticlePersonalInfo(articleId: String): LiveData<ArticlePersonalInfo?>
-    fun getAppSettings(): LiveData<AppSettings>
-    fun updateSettings(appSettings: AppSettings)
-    fun updateArticlePersonalInfo(info: ArticlePersonalInfo)
-}
-
 class ArticleRepository(
     private val local: LocalDataHolder = LocalDataHolder,
     private val network: NetworkDataHolder = NetworkDataHolder,
     private val prefs: PrefManager = PrefManager()
-) : IArticleRepository {
+) {
 
-    override fun loadArticleContent(articleId: String): LiveData<String?> {
-        return network.loadArticleContent(articleId) //5s delay from network
+    fun loadArticleContent(articleId: String): LiveData<String?> {
+        return network.loadArticleContent(articleId)
     }
 
-    override fun getArticle(articleId: String): LiveData<ArticleData?> {
-        return local.findArticle(articleId) //2s delay from db
+    fun getArticle(articleId: String): LiveData<ArticleData?> {
+        return local.findArticle(articleId)
     }
 
-    override fun loadArticlePersonalInfo(articleId: String): LiveData<ArticlePersonalInfo?> {
-        return local.findArticlePersonalInfo(articleId) //1s delay from db
+    fun loadArticlePersonalInfo(articleId: String): LiveData<ArticlePersonalInfo?> {
+        return local.findArticlePersonalInfo(articleId)
     }
 
-    override fun getAppSettings(): LiveData<AppSettings> = prefs.settings //from preferences
+    fun getAppSettings(): LiveData<AppSettings> = prefs.settings
 
-    override fun updateSettings(appSettings: AppSettings) {
+    fun updateSettings(appSettings: AppSettings) {
         prefs.isBigText = appSettings.isBigText
         prefs.isDarkMode = appSettings.isDarkMode
     }
 
-    override fun updateArticlePersonalInfo(info: ArticlePersonalInfo) {
+    fun updateArticlePersonalInfo(info: ArticlePersonalInfo) {
         local.updateArticlePersonalInfo(info)
     }
 }

@@ -1,4 +1,4 @@
-package ru.skillbranch.skillarticles.ui.custom.spans
+package ru.skillbranch.skillarticles.markdown.spans
 
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
@@ -11,6 +11,7 @@ class UnderlineSpan(
     private val underlineColor: Int,
     dotWidth: Float = 6f
 ) : ReplacementSpan() {
+
     private var textWidth = 0
     private val dashs = DashPathEffect(floatArrayOf(dotWidth, dotWidth), 0f)
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -33,15 +34,8 @@ class UnderlineSpan(
             path.lineTo(x + textWidth, bottom.toFloat())
             canvas.drawPath(path, paint)
         }
-
-        canvas.drawText(
-            text, 0, text.length,
-            x,
-            y.toFloat(),
-            paint
-        )
+        canvas.drawText(text, start, end, x, y.toFloat(), paint)
     }
-
 
     override fun getSize(
         paint: Paint,
@@ -50,8 +44,7 @@ class UnderlineSpan(
         end: Int,
         fm: Paint.FontMetricsInt?
     ): Int {
-        val measureText = paint.measureText(text.toString(), start, end)
-        textWidth = measureText.toInt()
+        textWidth = paint.measureText(text.toString(), start, end).toInt()
         return textWidth
     }
 
@@ -68,11 +61,9 @@ class UnderlineSpan(
 
         block()
 
-        //restore
+        color = oldColor
         pathEffect = null
         strokeWidth = oldWidth
         style = oldStyle
-        color = oldColor
     }
-
 }

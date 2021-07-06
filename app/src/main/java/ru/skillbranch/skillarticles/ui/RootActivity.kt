@@ -1,5 +1,7 @@
 package ru.skillbranch.skillarticles.ui
 
+import android.annotation.SuppressLint
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.Selection
 import android.text.Spannable
@@ -11,34 +13,43 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.appcompat.widget.AppCompatImageView
+import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.text.getSpans
-import androidx.core.view.children
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.snackbar.Snackbar
 import ru.skillbranch.skillarticles.R
+import ru.skillbranch.skillarticles.extensions.getIntDimension
+import com.google.android.material.snackbar.Snackbar
 import ru.skillbranch.skillarticles.databinding.ActivityRootBinding
-import ru.skillbranch.skillarticles.extensions.dpToIntPx
+import ru.skillbranch.skillarticles.databinding.LayoutArticleSubmenuBinding
+import ru.skillbranch.skillarticles.databinding.LayoutBottombarBinding
 import ru.skillbranch.skillarticles.extensions.setMarginOptionally
-import ru.skillbranch.skillarticles.ui.custom.markdown.MarkdownBuilder
-import ru.skillbranch.skillarticles.ui.custom.spans.SearchFocusSpan
-import ru.skillbranch.skillarticles.ui.custom.spans.SearchSpan
+import ru.skillbranch.skillarticles.markdown.MarkdownBuilder
+import ru.skillbranch.skillarticles.ui.custom.SearchFocusSpan
+import ru.skillbranch.skillarticles.ui.custom.SearchSpan
+import ru.skillbranch.skillarticles.ui.delegates.AttrValue
 import ru.skillbranch.skillarticles.ui.delegates.viewBinding
 import ru.skillbranch.skillarticles.viewmodels.*
 
+@SuppressLint("UseCompatLoadingForDrawables")
 class RootActivity : AppCompatActivity(), IArticleView {
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    val bgColor by AttrValue(R.attr.colorSecondary)
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    val fgColor by AttrValue(R.attr.colorOnSecondary)
+
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     var viewModelFactory: ViewModelProvider.Factory = ViewModelFactory(this, "0")
     private val viewModel: ArticleViewModel by viewModels { viewModelFactory }
-    val vb: ActivityRootBinding by viewBinding(ActivityRootBinding::inflate)
 
-    val vbBottombar
+    private val vb: ActivityRootBinding by viewBinding(ActivityRootBinding::inflate)
+    private val vbBottombar: LayoutBottombarBinding
         get() = vb.bottombar.binding
-    val vbSubmenu
+    private val vbSubmenu: LayoutArticleSubmenuBinding
         get() = vb.submenu.binding
     private lateinit var searchView: SearchView
 
@@ -61,10 +72,8 @@ class RootActivity : AppCompatActivity(), IArticleView {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_search, menu)
         val menuItem = menu.findItem(R.id.action_search)
-        searchView = (menuItem.actionView as SearchView)
-        searchView.queryHint = getString(R.string.article_search_placeholder)
+        searchView = menuItem.actionView as SearchView
 
-        //restore SearchView
         if (viewModel.currentState.isSearch) {
             menuItem.expandActionView()
             searchView.setQuery(viewModel.currentState.searchQuery, false)
@@ -74,6 +83,7 @@ class RootActivity : AppCompatActivity(), IArticleView {
         }
 
         menuItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+
             override fun onMenuItemActionExpand(item: MenuItem?): Boolean {
                 viewModel.handleSearchMode(true)
                 return true
@@ -83,9 +93,9 @@ class RootActivity : AppCompatActivity(), IArticleView {
                 viewModel.handleSearchMode(false)
                 return true
             }
-
         })
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+
             override fun onQueryTextSubmit(query: String?): Boolean {
                 viewModel.handleSearch(query)
                 return true
@@ -95,62 +105,28 @@ class RootActivity : AppCompatActivity(), IArticleView {
                 viewModel.handleSearch(newText)
                 return true
             }
-
         })
 
         return super.onCreateOptionsMenu(menu)
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        viewModel.saveSate()
-        super.onSaveInstanceState(outState)
-    }
+    override fun setupToolbar() {
+        setSupportActionBar(vb.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-    private fun renderNotification(notify: Notify) {
-        val snackbar = Snackbar.make(vb.coordinatorContainer, notify.message, Snackbar.LENGTH_LONG)
-            .setAnchorView(vb.bottombar)
-
-        when (notify) {
-            is Notify.ActionMessage -> {
-                val (_, label, handler) = notify
-
-                with(snackbar) {
-                    setActionTextColor(getColor(R.color.color_accent_dark))
-                    setAction(label) { handler.invoke() }
-                }
-            }
-
-            is Notify.ErrorMessage -> {
-                val (_, label, handler) = notify
-
-                with(snackbar) {
-                    setBackgroundTint(getColor(R.color.design_default_color_error))
-                    setTextColor(getColor(android.R.color.white))
-                    setActionTextColor(getColor(android.R.color.white))
-                    handler ?: return@with
-                    setAction(label) { handler.invoke() }
-                }
-            }
-            else -> { /* nothing */
-            }
+        val logo = if (vb.toolbar.childCount > 2) vb.toolbar.getChildAt(2) as ImageView else null
+        logo?.scaleType = ImageView.ScaleType.CENTER_CROP
+        val lp = logo?.layoutParams as? Toolbar.LayoutParams
+        lp?.let {
+            it.width = getIntDimension(R.dimen.icon_size_normal_40)
+            it.height = getIntDimension(R.dimen.icon_size_normal_40)
+            it.marginEnd = getIntDimension(R.dimen.spacing_normal_16)
+            logo.layoutParams = it
         }
-
-        snackbar.show()
-    }
-
-    override fun setupSubmenu() {
-        with(vbSubmenu) {
-            btnTextUp.setOnClickListener { viewModel.handleUpText() }
-            btnTextDown.setOnClickListener { viewModel.handleDownText() }
-            switchMode.setOnClickListener { viewModel.handleNightMode() }
-        }
-
     }
 
     override fun setupBottombar() {
         with(vbBottombar) {
-            val vbr = vb
-
             btnLike.setOnClickListener { viewModel.handleLike() }
             btnBookmark.setOnClickListener { viewModel.handleBookmark() }
             btnShare.setOnClickListener { viewModel.handleShare() }
@@ -160,16 +136,52 @@ class RootActivity : AppCompatActivity(), IArticleView {
                 searchView.clearFocus()
                 viewModel.handleUpResult()
             }
-
             btnResultDown.setOnClickListener {
                 searchView.clearFocus()
                 viewModel.handleDownResult()
             }
-
             btnSearchClose.setOnClickListener {
                 viewModel.handleSearchMode(false)
                 invalidateOptionsMenu()
             }
+        }
+    }
+
+    override fun setupSubmenu() {
+        with(vbSubmenu) {
+            btnTextUp.setOnClickListener { viewModel.handleUpText() }
+            btnTextDown.setOnClickListener { viewModel.handleDownText() }
+            switchMode.setOnClickListener { viewModel.handleNightMode() }
+        }
+    }
+
+    override fun renderUi(data: ArticleState) {
+        delegate.localNightMode = if (data.isDarkMode) MODE_NIGHT_YES else MODE_NIGHT_NO
+
+        with(vb.tvTextContent) {
+            textSize = if (data.isBigText) 18f else 14f
+            movementMethod = LinkMovementMethod()
+
+            MarkdownBuilder(context)
+                .markdownToSpan(data.content)
+                .run { setText(this, TextView.BufferType.SPANNABLE) }
+        }
+
+        with(vb.toolbar) {
+            title = data.title ?: "loading"
+            subtitle = data.category ?: "loading"
+            if (data.categoryIcon != null) logo = getDrawable(data.categoryIcon as Int)
+        }
+
+        if (data.isLoadingContent) {
+            return
+        }
+
+        if (data.isSearch) {
+            renderSearchResult(data.searchResults)
+            renderSearchPosition(data.searchPosition)
+        } else {
+            clearSearchResult()
         }
     }
 
@@ -179,10 +191,8 @@ class RootActivity : AppCompatActivity(), IArticleView {
             btnLike.isChecked = data.isLike
             btnBookmark.isChecked = data.isBookmark
         }
-
         if (data.isSearch) showSearchBar(data.resultsCount, data.searchPosition)
         else hideSearchBar()
-
     }
 
     override fun renderSubmenu(data: SubmenuData) {
@@ -191,52 +201,7 @@ class RootActivity : AppCompatActivity(), IArticleView {
             btnTextDown.isChecked = !data.isBigText
             btnTextUp.isChecked = data.isBigText
         }
-
         if (data.isShowMenu) vb.submenu.open() else vb.submenu.close()
-    }
-
-    override fun renderUi(data: ArticleState) {
-        delegate.localNightMode =
-            if (data.isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-
-        with(vb.tvTextContent) {
-            textSize = if (data.isBigText) 18f else 14f
-            movementMethod = LinkMovementMethod()  //for scroll and handle link click
-
-            MarkdownBuilder(context)
-                .markdownToSpan(data.content)
-                .run { setText(this, TextView.BufferType.SPANNABLE) }
-        }
-
-        //bind toolbar
-        with(vb.toolbar) {
-            title = data.title ?: "loading"
-            subtitle = data.category ?: "loading"
-            if (data.categoryIcon != null) logo = getDrawable(data.categoryIcon as Int)
-        }
-
-        if (data.isLoadingContent) return
-
-        if (data.isSearch) {
-            renderSearchResult(data.searchResults)
-            renderSearchPosition(data.searchPosition)
-        } else clearSearchResult()
-    }
-
-    override fun setupToolbar() {
-        setSupportActionBar(vb.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        val logo = vb.toolbar.children.find { it is AppCompatImageView } as? ImageView
-        logo ?: return
-        logo.scaleType = ImageView.ScaleType.CENTER_CROP
-        //check toolbar imports
-        (logo.layoutParams as? Toolbar.LayoutParams)?.let {
-            it.width = dpToIntPx(40)
-            it.height = dpToIntPx(40)
-            it.marginEnd = dpToIntPx(16)
-            logo.layoutParams = it
-        }
-
     }
 
     override fun renderSearchResult(searchResult: List<Pair<Int, Int>>) {
@@ -247,37 +212,30 @@ class RootActivity : AppCompatActivity(), IArticleView {
 
         searchResult.forEach { (start, end) ->
             content.setSpan(
-                SearchSpan(),
+                SearchSpan(bgColor, fgColor),
                 start,
                 end,
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
-
     }
 
     override fun renderSearchPosition(searchPosition: Int) {
         val content = vb.tvTextContent.text as Spannable
-
         val spans = content.getSpans<SearchSpan>()
 
-        //remove old search focus span
         content.getSpans<SearchFocusSpan>()
             .forEach { content.removeSpan(it) }
 
         if (spans.isNotEmpty()) {
-            //find position span
             val result = spans[searchPosition]
-            //move to selection
             Selection.setSelection(content, content.getSpanStart(result))
-            //set new search focus span
             content.setSpan(
-                SearchFocusSpan(),
+                SearchFocusSpan(bgColor, fgColor),
                 content.getSpanStart(result),
                 content.getSpanEnd(result),
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
             )
-
         }
     }
 
@@ -292,13 +250,55 @@ class RootActivity : AppCompatActivity(), IArticleView {
             setSearchState(true)
             setSearchInfo(resultsCount, searchPosition)
         }
-        vb.scroll.setMarginOptionally(bottom = dpToIntPx(56))
+        vb.scroll.setMarginOptionally(bottom = R.attr.actionBarSize)
     }
 
     override fun hideSearchBar() {
         with(vb.bottombar) {
             setSearchState(false)
         }
-        vb.scroll.setMarginOptionally(bottom = dpToIntPx(0))
+        vb.scroll.setMarginOptionally(bottom = 0)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        viewModel.saveState()
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun renderNotification(notification: Notify) {
+        val snackbar = Snackbar.make(
+            vb.coordinatorContainer,
+            notification.message,
+            Snackbar.LENGTH_LONG
+        )
+            .setAnchorView(vb.bottombar)
+            .setActionTextColor(getColor(R.color.color_accent_dark))
+
+        when (notification) {
+
+            is Notify.TextMessage -> { /* nothing */
+            }
+
+            is Notify.ActionMessage -> {
+                with(snackbar) {
+                    setAction(notification.actionLabel) {
+                        notification.actionHandler.invoke()
+                    }
+                }
+            }
+
+            is Notify.ErrorMessage -> {
+                with(snackbar) {
+                    setBackgroundTint(getColor(R.color.design_default_color_error))
+                    setTextColor(getColor(android.R.color.white))
+                    setActionTextColor(getColor(android.R.color.white))
+                    snackbar.setAction(notification.errorLabel) {
+                        notification.errorHandler?.invoke()
+                    }
+                }
+            }
+        }
+
+        snackbar.show()
     }
 }

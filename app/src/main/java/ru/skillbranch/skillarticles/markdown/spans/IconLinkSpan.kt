@@ -1,4 +1,4 @@
-package ru.skillbranch.skillarticles.ui.custom.spans
+package ru.skillbranch.skillarticles.markdown.spans
 
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
@@ -12,14 +12,11 @@ import androidx.annotation.VisibleForTesting
 
 class IconLinkSpan(
     private val linkDrawable: Drawable,
-    @Px
-    private val padding: Float,
-    @ColorInt
-    private val textColor: Int,
+    @Px val gap: Float,
+    @ColorInt val textColor: Int,
     dotWidth: Float = 6f
 ) : ReplacementSpan() {
 
-    private val gap = padding
     private var iconSize = 0
     private var textWidth = 0f
     private val dashs = DashPathEffect(floatArrayOf(dotWidth, dotWidth), 0f)
@@ -27,9 +24,27 @@ class IconLinkSpan(
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     var path = Path()
 
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence?,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?
+    ): Int {
+        if (fm != null) {
+            iconSize = fm.descent - fm.ascent
+        }
+        if (iconSize != 0) {
+            // setting drawable bounds as line height
+            linkDrawable.setBounds(0, 0, iconSize, iconSize)
+            textWidth = paint.measureText(text.toString(), start, end)
+        }
+        return (iconSize + gap + textWidth).toInt()
+    }
+
     override fun draw(
         canvas: Canvas,
-        text: CharSequence,
+        text: CharSequence?,
         start: Int,
         end: Int,
         x: Float,
@@ -46,35 +61,22 @@ class IconLinkSpan(
             path.lineTo(textStart + textWidth, bottom.toFloat())
             canvas.drawPath(path, paint)
         }
-        canvas.save() //save canvas position
-        val transY = (bottom - linkDrawable.bounds.bottom.toFloat()) //translate icon
+
+        // save canvas position
+        canvas.save()
+        // translate icon to line position
+        val transY = (bottom - linkDrawable.bounds.bottom.toFloat() )
         canvas.translate(x + gap / 2f, transY)
-        linkDrawable.draw(canvas) //draw icon
-        canvas.restore() //restore canvas position
+        // draw icon
+        linkDrawable.draw(canvas)
+        // restore canvas position
+        canvas.restore()
 
         paint.forText {
+            text ?: return@forText
             canvas.drawText(text, start, end, textStart, y.toFloat(), paint)
         }
     }
-
-
-    override fun getSize(
-        paint: Paint,
-        text: CharSequence?,
-        start: Int,
-        end: Int,
-        fm: Paint.FontMetricsInt?
-    ): Int {
-        if (fm != null) {
-            iconSize = fm.descent - fm.ascent
-        }
-        if (iconSize != 0) {
-            linkDrawable.setBounds(0, 0, iconSize, iconSize) //set drawable bounds as line height
-            textWidth = paint.measureText(text.toString(), start, end)
-        }
-        return (iconSize + gap + textWidth).toInt()
-    }
-
 
     private inline fun Paint.forLine(block: () -> Unit) {
         val oldStyle = style
@@ -87,7 +89,6 @@ class IconLinkSpan(
 
         block()
 
-        //restore
         pathEffect = null
         strokeWidth = oldWidth
         style = oldStyle
@@ -99,7 +100,6 @@ class IconLinkSpan(
 
         block()
 
-        //restore
         color = oldColor
     }
 }

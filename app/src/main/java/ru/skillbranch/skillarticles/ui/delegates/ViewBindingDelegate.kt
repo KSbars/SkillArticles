@@ -13,7 +13,8 @@ class ViewBindingDelegate<T : ViewBinding>(
     private val activity: AppCompatActivity,
     private val initializer: (LayoutInflater) -> T
 ) : ReadOnlyProperty<AppCompatActivity, T>, LifecycleObserver {
-    private var _value: T? = null
+
+    private var value: T? = null
 
     init {
         activity.lifecycle.addObserver(this)
@@ -21,21 +22,20 @@ class ViewBindingDelegate<T : ViewBinding>(
 
     @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
     fun onCreate() {
-        //run on activity create callback called
-        if (_value == null) {
-            _value = initializer(activity.layoutInflater)
-        }
-
-        activity.setContentView(_value!!.root) //set main view
-        activity.lifecycle.removeObserver(this) //unregister observe this
+        initValueIfNeeded()
+        activity.setContentView(value!!.root)
+        activity.lifecycle.removeObserver(this)
     }
 
     override fun getValue(thisRef: AppCompatActivity, property: KProperty<*>): T {
-        if (_value == null) {
-            _value = initializer(thisRef.layoutInflater)
-        }
+        initValueIfNeeded()
+        return value!!
+    }
 
-        return _value!!
+    private fun initValueIfNeeded() {
+        if (value == null) {
+            value = initializer(activity.layoutInflater)
+        }
     }
 }
 

@@ -2,8 +2,9 @@ package ru.skillbranch.skillarticles.extensions
 
 import ru.skillbranch.skillarticles.data.AppSettings
 import ru.skillbranch.skillarticles.data.ArticlePersonalInfo
-import ru.skillbranch.skillarticles.data.local.User
 import ru.skillbranch.skillarticles.viewmodels.ArticleState
+import ru.skillbranch.skillarticles.viewmodels.BottombarData
+import ru.skillbranch.skillarticles.viewmodels.SubmenuData
 
 fun ArticleState.toAppSettings(): AppSettings {
     return AppSettings(isDarkMode, isBigText)
@@ -37,12 +38,26 @@ fun ArticleState.asMap(): Map<String, Any?> = mapOf(
     "reviews" to reviews,
 )
 
-fun User.asMap(): Map<String, Any?> = mapOf(
-    "id"  to id,
-    "name"  to name,
-    "avatar"  to avatar,
-    "rating"  to rating,
-    "respect"  to respect,
-    "about"  to about
+fun ArticleState.fromMap(map: Map<String, Any?>): ArticleState = copy(
+    isAuth = map["isAuth"] as Boolean,
+    isLoadingContent = map["isLoadingContent"] as Boolean,
+    isLoadingReviews = map["isLoadingReviews"] as Boolean,
+    isLike = map["isLike"] as Boolean,
+    isBookmark = map["isBookmark"] as Boolean,
+    isShowMenu = map["isShowMenu"] as Boolean,
+    isBigText = map["isBigText"] as Boolean,
+    isDarkMode = map["isDarkMode"] as Boolean,
+    isSearch = map["isSearch"] as Boolean,
+    searchQuery = map["searchQuery"] as String,
+    searchResults = map["searchResults"] as List<Pair<Int, Int>>,
+    searchPosition = map["searchPosition"] as Int,
+    shareLink = map["shareLink"] as String,
+    title = map["title"] as String,
+    category = map["category"] as String,
+    categoryIcon = map["categoryIcon"] as Any,
+    date = map["date"] as String,
+    author = map["author"] as Any,
+    poster = map["poster"] as String,
+    content = map["content"] as String,
+    reviews = map["reviews"] as List<Any>,
 )
-

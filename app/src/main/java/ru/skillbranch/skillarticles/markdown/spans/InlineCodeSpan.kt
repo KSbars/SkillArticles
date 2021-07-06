@@ -1,4 +1,4 @@
-package ru.skillbranch.skillarticles.ui.custom.spans
+package ru.skillbranch.skillarticles.markdown.spans
 
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -10,23 +10,21 @@ import androidx.annotation.Px
 import androidx.annotation.VisibleForTesting
 
 class InlineCodeSpan(
-    @ColorInt
-    private val textColor: Int,
-    @ColorInt
-    private val bgColor: Int,
-    @Px
-    private val cornerRadius: Float,
-    @Px
-    private val padding: Float
+    @ColorInt private val textColor: Int,
+    @ColorInt private val bgColor: Int,
+    @Px private val cornerRadius: Float,
+    @Px private val padding: Float
 ) : ReplacementSpan() {
+
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    var rect: RectF = RectF()
+    val rect: RectF = RectF()
+
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     var measureWidth: Int = 0
 
     override fun getSize(
         paint: Paint,
-        text: CharSequence,
+        text: CharSequence?,
         start: Int,
         end: Int,
         fm: Paint.FontMetricsInt?
@@ -40,7 +38,7 @@ class InlineCodeSpan(
 
     override fun draw(
         canvas: Canvas,
-        text: CharSequence,
+        text: CharSequence?,
         start: Int,
         end: Int,
         x: Float,
@@ -50,11 +48,12 @@ class InlineCodeSpan(
         paint: Paint
     ) {
         paint.forBackground {
-            rect.set(x, top.toFloat(), x + measureWidth, y + paint.descent())
+            rect.set(x, top.toFloat(), x + measureWidth, bottom.toFloat())
             canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
         }
 
         paint.forText {
+            text ?: return@forText
             canvas.drawText(text, start, end, x + padding, y.toFloat(), paint)
         }
     }

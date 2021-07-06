@@ -24,15 +24,33 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 
 class PrefManager(context: Context = App.applicationContext()) {
 
-    val dataStore = context.dataStore
-    private val errHandler = CoroutineExceptionHandler { _, th ->
-        Log.e("PrefManager", "err ${th.message}")
-        //TODO handle error this
+    private val errorHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e("PrefManager", "err ${throwable.message}")
     }
-    internal val scope = CoroutineScope(SupervisorJob() + errHandler)
+    val scope = CoroutineScope(SupervisorJob() + errorHandler)
+    val dataStore = context.dataStore
 
     var isBigText by PrefDelegate(false)
     var isDarkMode by PrefDelegate(false)
+
+    val settings: LiveData<AppSettings>
+        get() {
+            val isBigText = dataStore.data.map { prefs ->
+                prefs[booleanPreferencesKey(this::isBigText.name)] ?: false
+            }
+            val isDarkMode = dataStore.data.map { prefs ->
+                prefs[booleanPreferencesKey(this::isDarkMode.name)] ?: false
+            }
+            return isBigText.zip(isDarkMode) { bigText, darkMode ->
+                AppSettings(
+                    isDarkMode = darkMode,
+                    isBigText = bigText
+                )
+            }
+                .onEach { Log.d("PrefManager", "settings $it") }
+                .distinctUntilChanged()
+                .asLiveData()
+        }
 
     var testInt by PrefDelegate(Int.MAX_VALUE)
     var testLong by PrefDelegate(Long.MAX_VALUE)
@@ -40,22 +58,5 @@ class PrefManager(context: Context = App.applicationContext()) {
     var testFloat by PrefDelegate(Float.MAX_VALUE)
     var testString by PrefDelegate("test")
     var testBoolean by PrefDelegate(false)
-
     var testUser by PrefObjDelegate(UserJsonAdapter())
-
-
-    val settings: LiveData<AppSettings>
-        get() {
-            val isBig = dataStore.data.map { it[booleanPreferencesKey(this::isBigText.name)] ?: false}
-            val isDark = dataStore.data.map { it[booleanPreferencesKey(this::isDarkMode.name)] ?: false}
-
-            return isDark.zip(isBig){ dark, big -> AppSettings(dark,big)}
-                .onEach { Log.e("PrefManager", "settings $it") }
-                .distinctUntilChanged()
-                .asLiveData()
-        }
-
-
-
 }
-
