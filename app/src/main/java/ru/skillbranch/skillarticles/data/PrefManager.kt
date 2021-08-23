@@ -23,35 +23,6 @@ import ru.skillbranch.skillarticles.data.delegates.PrefObjDelegate
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class PrefManager(context: Context = App.applicationContext()) {
-
-    private val errorHandler = CoroutineExceptionHandler { _, throwable ->
-        Log.e("PrefManager", "err ${throwable.message}")
-    }
-    val scope = CoroutineScope(SupervisorJob() + errorHandler)
-    val dataStore = context.dataStore
-
-    var isBigText by PrefDelegate(false)
-    var isDarkMode by PrefDelegate(false)
-
-    val settings: LiveData<AppSettings>
-        get() {
-            val isBigText = dataStore.data.map { prefs ->
-                prefs[booleanPreferencesKey(this::isBigText.name)] ?: false
-            }
-            val isDarkMode = dataStore.data.map { prefs ->
-                prefs[booleanPreferencesKey(this::isDarkMode.name)] ?: false
-            }
-            return isBigText.zip(isDarkMode) { bigText, darkMode ->
-                AppSettings(
-                    isDarkMode = darkMode,
-                    isBigText = bigText
-                )
-            }
-                .onEach { Log.d("PrefManager", "settings $it") }
-                .distinctUntilChanged()
-                .asLiveData()
-        }
-
     var testInt by PrefDelegate(Int.MAX_VALUE)
     var testLong by PrefDelegate(Long.MAX_VALUE)
     var testDouble by PrefDelegate(Double.MAX_VALUE)
@@ -59,4 +30,22 @@ class PrefManager(context: Context = App.applicationContext()) {
     var testString by PrefDelegate("test")
     var testBoolean by PrefDelegate(false)
     var testUser by PrefObjDelegate(UserJsonAdapter())
+
+    val settings: LiveData<AppSettings>
+        get() {
+            val isBig = dataStore.data.map { it[booleanPreferencesKey(this::isBigText.name)] ?: false }
+            val isDark = dataStore.data.map { it[booleanPreferencesKey(this::isDarkMode.name)] ?: false }
+            return isDark.zip(isBig){dark, big -> AppSettings(dark, big)}
+                .onEach { Log.d("M_PrefManager", "settings $it") }
+                .distinctUntilChanged()
+                .asLiveData()
+        }
+    val dataStore = context.dataStore
+    private val errHandler = CoroutineExceptionHandler { _, th ->
+        Log.d("M_PrefManager", "err ${th.message}")
+        //TODO handle error this
+    }
+    internal val scope = CoroutineScope(SupervisorJob() + errHandler)
+    var isBigText by PrefDelegate(false)
+    var isDarkMode by PrefDelegate(false)
 }

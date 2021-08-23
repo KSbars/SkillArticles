@@ -1,4 +1,4 @@
-package ru.skillbranch.skillarticles.markdown.spans
+package ru.skillbranch.skillarticles.ui.custom.spans
 
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -7,10 +7,11 @@ import androidx.annotation.ColorInt
 import androidx.annotation.Px
 
 class HorizontalRuleSpan(
-    @Px val ruleWidth: Float,
-    @ColorInt val ruleColor: Int
-) : ReplacementSpan() {
-
+    @Px
+    val ruleWidth:Float,
+    @ColorInt
+    val ruleColor:Int
+) : ReplacementSpan(){
     override fun getSize(
         paint: Paint,
         text: CharSequence?,
@@ -33,27 +34,17 @@ class HorizontalRuleSpan(
         paint: Paint
     ) {
         paint.forLine {
-            canvas.drawLine(
-                0f,
-                (top + bottom) / 2f,
-                canvas.width.toFloat(),
-                (top + bottom) / 2f,
-                paint
-            )
+            canvas.drawLine(0f,(bottom + top)/2f, canvas.width.toFloat(), (bottom + top)/2f, paint)
         }
     }
-
     private inline fun Paint.forLine(block: () -> Unit) {
         val oldColor = color
         val oldStyle = style
         val oldWidth = strokeWidth
-
         color = ruleColor
         style = Paint.Style.STROKE
         strokeWidth = ruleWidth
-
         block()
-
         color = oldColor
         style = oldStyle
         strokeWidth = oldWidth
