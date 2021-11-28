@@ -8,6 +8,7 @@ import android.os.Parcelable
 import android.text.Spannable
 import android.util.Log
 import android.view.*
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.ColorInt
@@ -34,7 +35,7 @@ import kotlin.math.hypot
 class MarkdownImageView private constructor(
     context: Context,
     fontSize: Float
-) : ViewGroup(context, null, 0), IMarkdownView {
+) : FrameLayout(context, null, 0), IMarkdownView {
 
     override var fontSize: Float = fontSize
         set(value) {
@@ -91,7 +92,6 @@ class MarkdownImageView private constructor(
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
         ivImage = ImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
-            setImageResource(R.drawable.ic_launcher_background)
             outlineProvider = object : ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: Outline) {
                     outline.setRoundRect(
@@ -192,6 +192,7 @@ class MarkdownImageView private constructor(
             right,
             ivImage.measuredHeight
         )
+        super.onLayout(changed,l,t,r,b)
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
